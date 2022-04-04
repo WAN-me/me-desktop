@@ -1,0 +1,42 @@
+#:import hex kivy.utils.get_color_from_hex
+#:import Window kivy.core.window.Window
+            
+<AuthScreen>:
+    pwd: password
+    BoxLayout:
+        orientation: 'vertical'
+        spacing: '20dp'
+        Label:
+            text: "Войти через аккаунт WAN ID"
+            font_size: root.size[1]/23
+            halign: "center"
+        TextInput:
+            id: login
+            password: False
+            hint_text: "Email"
+            pos_hint: {'center_x':0.5, 'center_y':-1}
+            size:  0,root.size[1]/12.3
+            size_hint: 0.8,None
+            multiline: False
+            font_size: self.size[1]/2
+        TextInput:
+            pos_hint: {'center_x':0.5, 'center_y':-1}
+            size: 0,root.size[1]/12.3
+            size_hint: 0.8,None
+            id: password
+            password: root.eact
+            hint_text: "Password" 
+            multiline: False
+            size_x: root.size[0]
+            font_size: self.size[1]/2
+            password_mask: "•"
+            on_size: app.draw_checkbox()
+            
+        Button:
+            text: "Продолжить"
+            on_release:
+                Clock.schedule_once(lambda dt: root.Login(), 1.2)
+            pos_hint: {'center_x':0.5}
+            size: 0,root.size[1]/12.3
+            size_hint: 0.6,None
+        Widget:

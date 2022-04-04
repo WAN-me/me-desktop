@@ -1,11 +1,13 @@
+import time
 from kivy.uix.screenmanager import *
-from kivy.app import App
+from kivymd.app import MDApp
 from kivy.uix.widget import Widget
 from kivy.uix.checkbox import CheckBox
 from kivy.uix.boxlayout import BoxLayout 
 from kivy.lang import Builder
 from kivy.clock import Clock
-from kivy.properties import ListProperty
+from kivymd.toast import toast
+from kivy.properties import ObjectProperty, BooleanProperty, ListProperty
 from kivy.uix.button import ButtonBehavior
 from kivy.uix.image import Image 
 from kivy.animation import Animation
@@ -46,16 +48,52 @@ class MainScreen(Screen):
     def __init__(self, **kwargs):
         super(MainScreen, self).__init__(**kwargs)
 
-class MessengerApp(App):
+class AuthScreen(Screen):
+    pwd = ObjectProperty(None)
+    eact = BooleanProperty(True)
+    def __init__(self, **kwargs):
+        super(AuthScreen, self).__init__(**kwargs)
+
+    def Login(self):
+        passwd = self.ids['password'].text
+        login = self.ids['login'].text
+        res = app.session("users.auth",{"email":login, 'password':passwd})
+        if 'token' in res:
+            session = Session(res['token'],cache)
+            cache.data['me'] = {}
+            cache.data['me'] = session('users.get')
+            cache.data['me']['token'] = session.token
+            cache.save()
+            toast("Авторизованно!")
+            time.sleep(2)
+            app.stop()
+            
+        else: 
+            toast(res['error']['text'])
+
+    
+
+class MessengerApp(MDApp):
+    def draw_checkbox(self):
+        sm.get_screen("auth_screen").remove_widget(self.eye)
+        
+        pwd = sm.get_screen("auth_screen").pwd
+        eye = self.eye
+        
+        eye.y = pwd.y + pwd.height / 2 - eye.height / 2
+        eye.x = pwd.x + pwd.width - (eye.y - pwd.y) - eye.width
+        
+        sm.get_screen("auth_screen").add_widget(self.eye)
     screen = None
     def __init__(self, session,  **kwargs):
         session = session
         self.session = session
         global sm
         sm = ScreenManager()
-        for chat in session.chats:
-            self.chats.append(chat)
-        self.me_id = cache.session.me_id
+        if token:
+            for chat in session.chats:
+                self.chats.append(chat)
+            self.me_id = cache.session.me_id
         #self.sm = ScreenManager()
         #self.sm.add_widget(msgScreen(name="msg_screen"))
         super().__init__(**kwargs)
@@ -75,11 +113,19 @@ class MessengerApp(App):
         self.scroll_bottom()
     messages = ListProperty()
     chats = ListProperty()
-
+    def refreshaeye(self,d):
+        print((self,d))
+        global sm
+        sm.get_screen("auth_screen").eact=d.active
     def build(self):
         global sm
         sm = ScreenManager(transition=SlideTransition())
-        sm.add_widget(MainScreen(name="msg_screen"))
+        if 'token' in cache.data.get('me',{}):
+            sm.add_widget(MainScreen(name="msg_screen"))
+        else:
+            sm.add_widget(AuthScreen(name="auth_screen"))
+            self.eye = CheckBox(size_hint=[None, None], size=[50, 50],active=True,background_checkbox_normal="img/hidden.png",background_checkbox_down="img/show.png",on_release=self.refreshaeye)
+            sm.get_screen("auth_screen").add_widget(self.eye)
         return sm
 
     def add_message(self, text, fromid):
@@ -159,14 +205,19 @@ if __name__ == '__main__':
     Builder.load_string("""
     #:include main.kv
     #:include mainscreen.kv
+    #:include authscreen.kv
     #:import Clock __main__.Clock
     """)
     cache = Db("cache.json")
-    session = Session(cache.data.get('me',{}).get('token','token'),cache)
+    token = cache.data.get('me',{}).get('token')
+    session = Session(token,cache)
     cache.session = session
-    session.chats = session('messages.chats')['items']
-    session.me_id = cache.data.get('me',{}).get('id',0)
+    if token:
+        session.chats = session('messages.chats')['items'] # auth
+        session.me_id = cache.data.get('me',{}).get('id',0) # auth
     app = MessengerApp(session)
-    session.start_poll(app.eventhandler)
-    print(session('messages.chats'))
+    if token:
+        session.start_poll(app.eventhandler) # auth
     app.run()
+    
+
