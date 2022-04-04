@@ -1,0 +1,114 @@
+#:import Gradient main.Gradient
+<MainScreen>:
+    BoxLayout:
+        orientation: 'horizontal'
+        BoxLayout:
+            size_hint_x: 1
+
+            orientation: 'vertical'
+            padding: dp(5), dp(5)
+            canvas:
+
+                Color: 
+                    rgba: rgba('f2e3ac')
+                Rectangle:
+                    size: self.size
+                    pos: self.pos
+                    texture: Gradient.vertical(rgba("FFFFFF"), rgba("FFFFFF"))
+            RecycleView:
+                data: app.chats
+                viewclass: 'Chat'
+                RecycleBoxLayout:
+                    spacing: dp(10)
+                    id: cbox
+                    orientation: 'vertical'
+                    size_hint_y: None
+                    size: self.minimum_size
+                    default_size_hint: 1, None
+                    default_size: 0, 38
+                    key_size: '_size'
+
+                    
+        
+
+        BoxLayout:
+            size_hint_x: 3
+
+            orientation: 'vertical'
+            padding: dp(5), dp(5)
+            canvas.before:
+                Color: 
+                    #rgba: rgba('FFFFFF')
+                Rectangle:
+                    size: self.size
+                    pos: self.pos
+                    texture: Gradient.horizontal(rgba("f2e3ac"), rgba("a94ffe"))
+            RecycleView:
+                id: rv
+                data: app.messages
+                viewclass: 'Message'
+                do_scroll_x: False
+
+                RecycleBoxLayout:
+                    spacing: dp(10)
+                    id: box
+                    orientation: 'vertical'
+                    size_hint_y: None
+                    size: self.minimum_size
+                    default_size_hint: 1, None
+                    default_size: 0, 38
+                    key_size: '_size'
+
+            FloatLayout:
+                size_hint_y: None
+                height: 0
+                Button:
+                    size_hint: (None, None)
+                    halign: 'left'
+                    width: self.texture_size[0]+dp(10)
+                    height: self.texture_size[1]*1.5 if rv.height < box.height and rv.scroll_y > 0 else 0
+                    opacity: 0 if not self.height else 1
+                    background_color: 0,0,0,0  # the last zero is the critical on, make invisible
+                    color: rgba('000000')
+                    canvas.before:
+                        Color:
+                            rgba: RGBA(255,255,255,150)
+                        RoundedRectangle:
+                            size: self.size
+                            radius: dp(5), dp(5)
+                            pos: self.pos
+                    text:
+                        (
+                        'go to last message'
+                        if rv.height < box.height and rv.scroll_y > 0 else
+                        ''
+                        )
+                    pos_hint: {'y': 0, 'center_x': .5}
+                    on_release: app.scroll_bottom()
+
+            BoxLayout:
+                size_hint: 1, None
+                size: self.minimum_size
+                spacing: 10
+                TextInput:
+                    id: ti
+                    size_hint: 1, None
+                    height: min(max(self.line_height, self.minimum_height), 150)
+                    multiline: False
+                    background_color: 250,120,250,0  # the last zero is the critical on, make invisible
+                    on_text_validate:
+                        app.send_message(self)
+                    canvas.after:
+                        Color: 
+                            rgba: rgba(255,255,255,43) if not self.focused else rgba(255,255,255,80)
+                        RoundedRectangle:
+                            radius: dp(5), dp(5)
+                            size: self.size
+                            pos: self.pos
+
+                ImageButton:
+                    source: 'arrow_send.png'
+                    size: (dp(30), dp(30))
+                    on_release:
+                        app.send_message(ti)
+

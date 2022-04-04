@@ -9,6 +9,7 @@ from kivy.properties import ListProperty
 from kivy.uix.button import ButtonBehavior
 from kivy.uix.image import Image 
 from kivy.animation import Animation
+from kivy.core.audio import SoundLoader
 from kivy.metrics import dp
 import kivy
 from kivy.core.window import Window
@@ -19,6 +20,7 @@ from itertools import chain
 from kivy.graphics.texture import Texture
 from jsondb import Db
 from classes import Session
+
 
 
 class Gradient(object):
@@ -37,29 +39,28 @@ class Gradient(object):
         buf = bytes([int(v * 255) for v in chain(*args)])  # flattens
         texture.blit_buffer(buf, colorfmt='rgba', bufferfmt='ubyte')
         return texture
-Builder.load_file('main.kv')
 
-class MessengerBox(BoxLayout):
-    pass
 
-class ImageButton(ButtonBehavior,Image):
-    def build(slef):
-        return kivy.Widget
+class MainScreen(Screen):
 
-class msgScreen(Screen):
-    ...
+    def __init__(self, **kwargs):
+        super(MainScreen, self).__init__(**kwargs)
 
 class MessengerApp(App):
     screen = None
     def __init__(self, session,  **kwargs):
         session = session
         self.session = session
+        global sm
+        sm = ScreenManager()
         for chat in session.chats:
             self.chats.append(chat)
         self.me_id = cache.session.me_id
         #self.sm = ScreenManager()
         #self.sm.add_widget(msgScreen(name="msg_screen"))
-        super(MessengerApp, self).__init__(**kwargs)
+        super().__init__(**kwargs)
+
+    
     def chat_select(self, label):
         print(label.id)
         for chat in session.chats:
@@ -76,8 +77,10 @@ class MessengerApp(App):
     chats = ListProperty()
 
     def build(self):
-        self.screen = MessengerBox()
-        return self.screen
+        global sm
+        sm = ScreenManager(transition=SlideTransition())
+        sm.add_widget(MainScreen(name="msg_screen"))
+        return sm
 
     def add_message(self, text, fromid):
         self.messages.append({
@@ -131,28 +134,33 @@ class MessengerApp(App):
 
 
     def scroll_bottom(self):
-        rv = self.root.ids.rv
-        box = self.root.ids.box
+        global sm
+        rv = sm.get_screen('msg_screen').ids.rv
+        box = sm.get_screen('msg_screen').ids.box
         if rv.height < box.height:
             Animation.cancel_all(rv, 'scroll_y')
             Animation(scroll_y=0, t='out_quad', d=.5).start(rv)
 
-
     def eventhandler(self,upd):
         print(upd)
         type = upd["type"]
-        
-        if type ==1:
-            self.add_message(upd['object']['text'], upd['object']['from_id'])
-            self.scroll_bottom()
-        elif type == 2:
-            self.add_message(upd['object']['text'], upd['object']['from_id'])
+        if cache.data['chat']['id'] in (upd['object']['to_id'], upd['object']['from_id'] ):
+            if type ==1:
+                self.add_message(upd['object']['text'], upd['object']['from_id'])
+                self.session.notif()
+            elif type == 2:
+                self.add_message(upd['object']['text'], upd['object']['from_id'])
+                self.scroll_bottom()
 
 
 
 if __name__ == '__main__':
     print('start')
-
+    Builder.load_string("""
+    #:include main.kv
+    #:include mainscreen.kv
+    #:import Clock __main__.Clock
+    """)
     cache = Db("cache.json")
     session = Session(cache.data.get('me',{}).get('token','token'),cache)
     cache.session = session

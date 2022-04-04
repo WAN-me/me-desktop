@@ -8,8 +8,6 @@ import playsound
 def print(obj):
     sys.stdout.write(str(obj)+'\n\r')
 
-def notif():
-    Thread(target=playsound.playsound,args=('not.mp3', True)).start()
 class COLOR():
     HEADER="\033[95m"
     BLUE="\033[96m"
@@ -28,6 +26,8 @@ class ctrl():
     j = "\n"
 
 class Session():
+    def notif(self):
+        Thread(target=playsound.playsound,args=('not.mp3', True)).start()
     def __init__(self,token,cache):
         self.token = token
         self.cache = cache
